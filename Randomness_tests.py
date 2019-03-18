@@ -3,6 +3,32 @@ from scipy import stats
 import itertools
 
 significance = 0.05
+significance2 = 0.01
+
+def stringify(l):
+    a = ""
+    for c in l:
+        a += str(c)
+    return a
+
+def to_int(b):
+    total = 0
+    i = 0
+    for bit in reversed(b):
+        total += bit*(2**i)
+        i+=1
+    return total
+
+def tobin(seq):
+    a = []
+    for b in seq:
+        t = format(b, "b")
+        for c in t:
+            a.append(int(c))
+    print(len(a))
+    return a
+
+
 
 def serial(seq):
     if len(seq) < 21:
@@ -26,11 +52,10 @@ def serial(seq):
     statistic = ((4/(len(seq)-1.0))*((n00**2)+(n01**2)+(n10**2)+(n11**2)))-((2*((n0**2)+(n1**2)))/(len(seq)+0.0))+1
     if (1 - stats.chi2.cdf(statistic, 2)) < significance:
         print("Statistic = "+str(statistic)+", Signficance = "+str((1 - stats.chi2.cdf(statistic, 2)))
-              +", likely fasle.")
+              +", likely false.")
     else:
         print("Statistic = "+str(statistic)+", Signficance = "+str((1 - stats.chi2.cdf(statistic, 2)))
               +", likely true.")
-
 
 #length of sequence must be >9
 #chi square deg 1, non random is higher (one sided test)
@@ -47,7 +72,7 @@ def monobit(seq):
     statistic = ((n_0-n_1)**2)/float(n)
     if (1 - stats.chi2.cdf(statistic, 1)) < significance:
         print("Statistic = "+str(statistic)+", Signficance = "+str((1 - stats.chi2.cdf(statistic, 1)))
-              +", likely fasle.")
+              +", likely false.")
     else:
         print("Statistic = "+str(statistic)+", Signficance = "+str((1 - stats.chi2.cdf(statistic, 1)))
               +", likely true.")
@@ -74,7 +99,7 @@ def poker(seq,m):
     statistic = (((2**m)/(k+0.0))*(sum_counter))-k
     if (1 - stats.chi2.cdf(statistic, (2**m)-1)) < significance:
         print("Statistic = "+str(statistic)+", Signficance = "+str((1 - stats.chi2.cdf(statistic, (2**m)-1)))
-              +", likely fasle.")
+              +", likely false.")
     else:
         print("Statistic = "+str(statistic)+", Signficance = "+str((1 - stats.chi2.cdf(statistic, (2**m)-1)))
               +", likely true.")
@@ -124,10 +149,62 @@ def runs(seq):
     statistic = sum_blocks + sum_gaps
     if (1 - stats.chi2.cdf(statistic, (2*k)-2)) < significance:
         print("Statistic = "+str(statistic)+", Signficance = "+str((1 - stats.chi2.cdf(statistic, (2*k)-2)))
-              +", likely fasle.")
+              +", likely false.")
     else:
         print("Statistic = "+str(statistic)+", Signficance = "+str((1 - stats.chi2.cdf(statistic, (2*k)-2)))
               +", likely true.")
 
+def autocor(seq,d):
+    if d > math.floor(len(seq)/2):
+        return "error, sequence too small."
+    xor_sum = 0
+    for i in range(len(seq)-d):
+        if (not(seq[i] and seq[i+d])) and (seq[i] or seq[i+d]):
+            xor_sum +=1
+    statistic = 2*(xor_sum-((len(seq)-d)/2.0))/math.sqrt(len(seq)-d)
+    if (1 - stats.norm.cdf(statistic) < significance) or (stats.norm.cdf(statistic) < significance):
+        print("Statistic = "+str(statistic)+", likely false.")
+    else:
+        print("Statistic = "+str(statistic)+", likely true.")
 
-test = [1,1,1,0,0,0,1,1,0,0,0,1,0,0,0,1,0,1,0,0,1,1,1,0,1,1,1,1,0,0,1,0,0,1,0,0,1,0,0,1]*4
+
+def universal(seq,L,Q,K):#Q should be at least 10*(2**L)
+    #K hsould be at least 1000*(2**L)
+    #sequence length should be at least 1010*(2**l)
+    
+    distribution_values = [
+    [6, 5.2177052, 2.954],
+    [7, 6.1962507 ,3.125],
+    [8, 7.1836656 ,3.238],
+    [9, 8.1764248 ,3.311],
+    [10, 9.1723243 ,3.356],
+    [11, 10.170032 ,3.384],
+    [12, 11.168765 ,3.401],
+    [13, 12.168070 ,3.410],
+    [14, 13.167693 ,3.416],
+    [15, 14.167488, 3.419],
+    [16, 15.167379, 3.421]]
+
+    if (not (L < 17) and (L > 5)) or (K<(1000*(2**L))) or (Q<10*(2**L)) or (len(seq) < L*1010*(2**L)) or (((K+Q)*L) > len(seq)):
+        print(K,(1000*(2**L)))
+        print(Q,10*(2**L))
+        print(len(seq),(K+Q)*L)
+        print("Parameter error")
+    else:
+        T = [0 for i in range(2**L)]
+        for i in range(0,Q):
+            T[to_int(seq[i*L:(i*L)+L])] = i
+        total = 0
+        for i in range(Q,Q+K):
+            total += math.log(i-T[to_int(seq[i*L:(i*L)+L])],2)
+            T[to_int(seq[i*L:(i*L)+L])] = i
+
+        value = total/float(K)
+        c = 0.7 - (0.8/float(L)) + ((4+(32/float(L)))*K**(-3/float(L)))/15.0
+        stdev = c*math.sqrt(distribution_values[L-6][2]/float(K))
+        statistic = abs((value - distribution_values[L-6][1])/(math.sqrt(2)*stdev))
+        p_value = math.erfc(statistic)
+        if (p_value < significance2):
+            print("Statistic = "+str(statistic)+", Signficance = "+str(p_value)+", likely false.")
+        else:
+            print("Statistic = "+str(statistic)+", Signficance = "+str(p_value)+", likely true.")
