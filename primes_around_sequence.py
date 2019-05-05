@@ -25,7 +25,7 @@ def is_nearer_to_larger_closest_prime(x):
 		return 1
 	elif distance_to_larger > distance_to_smaller:	# return -1 if x is closer to the smaller prime
 		return -1
-	else:											# return 0 if same distance
+	else:						# return 0 if same distance
 		return 0
 
 
@@ -54,7 +54,7 @@ def is_nearer_to_larger_closest_prime(x):
 # 	return test_sequence
 
 def generate_test_sequence(upper_bound):			# the test sequence is 2p where p are prime numbers
-	test_sequence = []								# the corresponding bit sequence (generated with skip) appeared to be random
+	test_sequence = []					# the corresponding bit sequence (generated with skip) appeared to be random
 	num = 1
 	index = 0
 	while index < upper_bound:
@@ -92,7 +92,7 @@ def generate_bit_sequence(lower_bound, upper_bound, skip = 1):
 
 bit_sequence = generate_bit_sequence(100, 100000, 20)
 
-# can choose any randomness tests combination from 'randomness_tests.py'
+# can choose any randomness tests combination from 'Randomness_tests.py'
 # here are some examples
 print('test result:')
 tests.monobit(bit_sequence)
